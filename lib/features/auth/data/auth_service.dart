@@ -54,4 +54,4 @@ class AuthService {
         return 'Erro na autenticação: ${e.message}';
     }
   }
-}
+} 
