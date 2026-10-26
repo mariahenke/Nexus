@@ -1,16 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+// PONTO DE ENTRADA DO APP
+// 1) Liga o Firebase  2) Aplica o tema  3) Decide: tela de login ou app.
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 
-// Imports dos seus ficheiros locais
-import 'core/theme/app_theme.dart';
-import 'features/auth/data/auth_service.dart';
-import 'features/habits/presentation/screens/home_screen.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
+import 'core/theme.dart';
+import 'firebase_options.dart';
+import 'screens/login_screen.dart';
+import 'screens/shell.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const NexusApp());
 }
 
@@ -22,36 +23,25 @@ class NexusApp extends StatelessWidget {
     return MaterialApp(
       title: 'Nexus',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const AuthWrapper(),
+      theme: buildTheme(),
+      home: const AuthGate(),
     );
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+// Escuta o login: se tem usuário -> app; se não -> login.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: AuthService().userChanges,
-      builder: (context, snapshot) {
-        // Estado de carregamento enquanto o Firebase verifica a sessão
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryColor),
-            ),
-          );
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-
-        // Se existir um usuário autenticado no Firebase, vai para a HomeScreen
-        if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
-        }
-
-        // Se não houver usuário logado, abre a tela de Login
-        return const LoginScreen();
+        return snap.data == null ? const LoginScreen() : const Shell();
       },
     );
   }
